@@ -1,0 +1,2383 @@
+$(function(){
+        $("#includedBotSidebar").load("botsidebar.jsp");
+    });
+
+$(function(){
+    $("#includedBotContent").load("botdashboard.jsp");
+});
+
+var currentPage = 1;
+var rowsPerPage = 10; // Change this value as needed
+var entityContainer=[];
+var entityDataTest="Select,";
+var dataSource =[];
+var ds={example:"",value:"",entity:""};
+$(document).ready(function(){
+	$("#botlist").change(function() {
+		checkBotAddBot();
+	})
+	
+	
+	
+	$("#enableEntitybtn").click(function() {
+		console.log("Inside enableEntitybtn click");
+		
+	})
+	
+	$("#disableEntitybtn").click(function() {
+		console.log("Inside disableEntitybtn click");
+		document.getElementById("addMoreExamples").style.visibility = "visible";
+	})
+	
+});
+
+var utterOptions = "<option value='select'>Select</option>";
+var intentOptions = "<option value='select'>Select</option>";
+
+function fetchIntentAndEntity(fileString) {
+	var x  = ["a", "b", "c", "d", "e"];
+		x = fileString.split("\n");
+		var j = 0;
+		var k = 0;
+	
+		for (i=0; i<x.length; i++) {
+			if (x[i].includes("*")) {
+				intentAndEntityArray[j] = x[i].trim();
+				j++;
+			} else if (x[i].includes("-")) {
+				utterResponse[k] = x[i].trim();
+				k++;
+			}
+		}
+		
+		var set = new Set(utterResponse);
+		utterResponse = Array.from(set);
+		j = 0;
+		k = 0;
+		//console.log(intentAndEntityArray);
+		//console.log(utterResponse);
+		
+		intentAndEntityArray.forEach(makeIntentOption);
+		utterResponse.forEach(makeUtterOption);
+		
+		//console.log(utterOptions);
+		document.getElementById("intentlist").innerHTML = intentOptions;
+		document.getElementById("actionslist").innerHTML = utterOptions;
+		//<option value="select">Select</option><option value="utter_askhowIcanIhelp">utter_askhowIcanIhelp</option>
+		//<option value="select">Select</option>
+}
+
+function makeIntentOption(item) {
+	if(item.includes("\{")) {
+		item = item.split("\{")[0];
+	} else if (item.includes("\(")) {
+		item = item.split("\(")[0];
+	}
+	intentOptions = intentOptions + "<option value='"+item+"'>"+item+"</option>";
+}
+
+function makeUtterOption(item) {
+	utterOptions = utterOptions + "<option value='"+item+"'>"+item+"</option>";
+}
+
+// Save Data
+function saveFile() {
+	
+    // Get the data from each element on the form.
+	/*const name = document.getElementById('txtName');
+    const age = document.getElementById('txtAge');
+    const email = document.getElementById('txtEmail');*/
+    const fileName = document.getElementById('nlu-name');
+    const msg = document.getElementById('nlu_config');
+    
+    // This variable stores all the data.
+    let data = 
+        /*'\r Name: ' + name.value + ' \r\n ' + 
+        'Age: ' +age.value + ' \r\n ' + 
+        'Email: ' + email.value + ' \r\n ' + 
+        'Country: ' + country.value + ' \r\n ' + 
+        'Message: ' +*/ msg.value;
+    let fName = fileName.value;
+    
+    // Convert the text to BLOB.
+    const textToBLOB = new Blob([data], { type: 'text/plain' });
+    const sFileName = fName+'.md';	   // The file to save the data.
+
+    let newLink = document.createElement("a");
+    newLink.download = sFileName;
+
+    if (window.webkitURL != null) {
+        newLink.href = window.webkitURL.createObjectURL(textToBLOB);
+    }
+    else {
+        newLink.href = window.URL.createObjectURL(textToBLOB);
+        newLink.style.display = "none";
+        document.body.appendChild(newLink);
+    }
+
+    newLink.click(); 
+}
+
+
+function showcreate() {
+	//document.getElementById("form").style.display = "block";
+	document.getElementById("form").style.visibility = "visible";
+	document.getElementById("file-selector").style.display = "none";
+	document.getElementById("footer").style.display = "block";
+}
+
+function showupdate() {
+	//document.getElementById("form").style.display = "block";
+	document.getElementById("form").style.visibility = "visible";
+	document.getElementById("file-selector").style.display = "block";
+	document.getElementById("footer").style.display = "block";
+}
+
+function showedit() {
+	//document.getElementById("form").style.display = "block";
+	document.getElementById("form").style.visibility = "visible";
+	document.getElementById("file-selector").style.display = "block";
+	document.getElementById("footer").style.display = "block";
+}
+
+
+// Upload to Server
+function uploadserver() {
+	var x = "";
+	$.post("/dashboard_copy/uploadservlet", {}, function(uploadstatus){
+		x = uploadstatus;
+	});
+	
+}
+
+
+
+function addBot() {
+	var botName = document.getElementById('nlu_config');
+	var botServerPath = document.getElementById('nlu_config');
+}
+
+function botListenerInteractive() {
+	 //executeRunInteractive();
+	var botName = $("#botlist").val();
+	//var userid = session.getAttribute("username");
+	
+	//window.location = "/completedashboard/interactivelearning.jsp";
+	
+	$.post("/dashboard_copy/runinteractiveservlet", {bot:botName}, function(executionresult){
+		x = executionresult;
+		if(x.includes("Success")) {
+			alert(x);
+		 	window.location = "/dashboard_copy/interactivelearning.jsp";
+		 }
+	});
+}
+
+
+
+
+/**##########################################################################################**/
+
+//-------------------------------- Common Data Start --------------------------//
+
+function nluclicks() {
+	document.getElementsById("bothome").setAttribute("class", "list-group-item waves-effect");
+	document.getElementsById("nlu").setAttribute("class", "list-group-item list-group-item-action waves-effect active");
+}
+
+function showactions() {
+	document.getElementById("actionsection").style.display = "block";
+}
+
+function showIntentEntity() {
+	document.getElementById("intentandentitygroup").style.display = "block";
+}
+
+//-------------------------------- Common Data End --------------------------//
+
+//-------------------------------- Bot Page Start --------------------------//
+
+function botListenerAddBot() {
+	var botName = this.value
+	document.getElementById("newConfig").style.visibility = "visible";
+	
+	if (botName.includes("Add Bot")) {
+		document.getElementById("newBot").style.display = "block";
+//		document.getElementById("newConfig").style.visibility = "visible";
+		document.getElementById("bot_config").innerHTML = "This is the sample. \n You can change according to your requirement. \n language: en \n pipeline:\n - name: 'SpacyNLP' \n - name: 'SpacyTokenizer' \n - name: 'SpacyFeaturizer' \n\n policies: \n - name: MappingPolicy \n - name: MemoizationPolicy \n max_history: 1";
+  
+	} else {
+		document.getElementById("newBot").style.display = "none";
+		document.getElementById("bot_config").innerHTML = "";
+		$.post("/dashboard_copy/FetchConfigFileDataServlet", {bot:botName}, function(configFileData){
+			var x = configFileData;
+			var formatedText = "";
+			//document.getElementById("newConfig").style.display = "visible";
+			x.replace(/[{()}]/g, '');
+			var formatTextArr =  x.split(',')
+			for (var i = 0; i < formatTextArr.length; i++) {
+				formatedText = formatedText + "\n" + formatTextArr[i];
+			}
+			
+			//x.replace(',', '\n');
+			document.getElementById("bot_config").innerHTML = formatedText;
+		});
+	}
+	
+}
+
+function checkBotAddBot() {
+	
+	var test =document.getElementById("botlist").value;
+	
+	if(test=="Add Bot"){
+		document.getElementById("saveBotBtn").style.display = "inline";
+		document.getElementById("saveBotBtn").style.visibility = "visible";
+		document.getElementById("updateBotBtn").style.visibility = "hidden";
+	}else{
+		document.getElementById("saveBotBtn").style.display = "none";
+		document.getElementById("updateBotBtn").style.visibility = "visible";
+	}
+	
+	
+	var newBotName = $("#name").val();
+	var x = document.getElementById('name');
+	
+	if (newBotName.length == 0){
+		if ($('#newBot').css('display') === 'block'/*window.getComputedStyle(x).visibility === "visible"*/) {
+			alert("Please enter bot name first !!!");
+		  }
+	} else {
+	
+	var x = document.getElementById('botlist');
+    var txt = "";
+    var val = "";
+    for (var i = 0; i < x.length; i++) {
+        txt +=x[i].text + ",";
+        val +=x[i].value + ",";
+     }
+    
+    if (txt.includes(newBotName)){
+    	alert("Bot name already exist!!! \nPlease enter different bot name")
+    	document.getElementById('name').value = "";
+    }
+	}
+	
+}
+
+function addBot() {
+	
+	
+	
+	var botName = $("#name").val();
+	
+			var configData = $("#bot_config").val();
+	
+	$.post("/dashboard_copy/addbotservlet", {bot:botName, botconfig:configData}, function(addBotStatus){
+		location.reload();
+		var x = addBotStatus; 
+		alert(x);
+	});
+	
+
+}
+
+function updateconfigfile() {
+	var botName = $("#botlist").val();
+	var configData = $("#bot_config").val();
+	
+	$.post("/dashboard_copy/UpdateConfigFileServlet", {bot:botName, botconfig:configData}, function(updateStatus){
+		var x = updateStatus;
+		alert(x);
+	});
+	
+}
+
+
+//-------------------------------- Bot Page End --------------------------//
+
+//-------------------------------- Intent Page Start --------------------------//
+
+//function botListenerNLU() {
+//	var value = this.value
+//	$('#entitylist').empty();
+//	document.getElementById('ceditorexamples').value = "";
+//	
+//	$.post("/completedashboard/FetchallIntentServlet", {bot:value}, function(intentData){
+//		
+//		$('#intentlist')
+//	    .empty()
+//	    .append("<option value='select'>Select</option><option value='Create New Intent'>Create New Intent</option>");
+//		
+//		var messageData = intentData;
+//		if(messageData.includes("File Not Exist") == false) {
+//		messageData = messageData.replace("null#","");
+//		var messageArr = messageData.split('#');
+//		
+//		var selectTag = document.getElementById("intentlist");
+//		for (var j=0; j<messageArr.length; j++) {
+//			var option = document.createElement("option");
+//			option.text = messageArr[j];
+//			option.setAttribute ("value", messageArr[j]);
+//			selectTag.add(option, selectTag[j]);
+//		}
+//		}
+//		
+//	});
+//}
+//
+//var finalTextModfied = "";
+//
+//function intentChangeListnerNLU(){
+//	
+//	var value = this.value
+//	var botName = $("#botlist").val();
+//	var examples = "";
+//	
+//	if (value.includes("Create New Intent")) {
+//		document.getElementById("newIntentValue").style.display = "block";
+//		document.getElementById("entitydisplaygroup").style.display = "none";
+//		document.getElementById('ceditorexamples').value = "";
+//	} else {
+//	document.getElementById("entitydisplaygroup").style.display = "block";
+//	document.getElementById("newIntentValue").style.display = "none";
+//	$.post("/completedashboard/readintentservlet", {intent:value, bot:botName}, function(examplesData){
+//		examples = examplesData;
+//		document.getElementById("ceditorexamples").style.display = "block";
+//		document.getElementById("ceditorbtn").style.display = "none";
+//		entityArr = [];
+//		if(examples != "")
+//		{
+//			document.getElementById('ceditorexamples').value = examples;
+//			
+//			fetchEntity(value, botName);S
+//		} else 
+//		{
+//			document.getElementById('ceditorexamples').value = "";
+//		}
+//	});
+//	}
+//	
+//}
+//
+//var entityArr = [];
+//
+//function fetchEntity(value, botName) {
+//	$.post("/completedashboard/FetchEntityForDomainServlet", {intent:value, bot:botName}, function(entityData){
+//		
+//		//document.getElementById("entitylist").innerHTML = "<option value='select'>Select</option>";
+//		$('#entitylist').empty();
+//	    /*.append("<option value='select'>Select</option>")*/;
+//		
+//		var messageData = entityData;
+//		console.log(messageData);
+//		if(messageData.includes("File Not Exist") == false) {
+//		messageData = messageData.replace("null#","");
+//		messageData = messageData.replace("null","");
+//		var messageArr = messageData.split("#");
+//		var entityStrArr = [];
+//		for (var i = 0; i < messageArr.length; i++) {
+//			entityStrArr.push(messageArr[i].split(":")[0]);
+//		}
+//		
+//		var selectTag = document.getElementById("entitylist");
+//		//var selectTag2 = document.getElementById("entitylistsec");
+//		for (var j=0; j<entityStrArr.length; j++) {
+//			var option = document.createElement("option");
+//			option.text = entityStrArr[j] +" ("+messageArr[j].split(":")[1]+")";
+//			option.setAttribute ("value", entityStrArr[j]);
+//			selectTag.add(option, selectTag[j]);
+//			//selectTag2.add(option, selectTag[j]);
+//			if (entityArr.indexOf(entityStrArr[j]) == -1) {
+//				entityArr.push(entityStrArr[j]);
+//			}
+//		}
+//		messageArr = [];
+//		entityStrArr = [];
+//		//document.getElementById("storiesentity").value = messageArr;
+//		}
+//		
+//	});
+//}
+//
+function updateIntent() {
+	
+	console.log("updateIntent Before"+finalTextModfied);
+	
+	var botName = $("#botlist").val();
+	var examples = document.getElementById('ceditorexamples').value;
+	var newIntentName = document.getElementById('newIntentValue').value;
+	var intentName = document.getElementById('intentlist').value;
+	
+$.post("/completedashboard/updateintentservlet", {exampledata:examples, intent:intentName, entitydata:finalTextModfied, newIntent:newIntentName, bot:botName}, function(status){
+	var x = status;
+		
+		if (x.includes("JSON file created")) {
+			finalTextModfied = "";
+			diableEntity();
+		document.getElementById('ceditorexamples').value = "";
+		
+		var botName = $("#botlist").val();
+			$.post("/completedashboard/FetchallIntentServlet", {bot:botName}, function(intentData){
+				
+			$('#intentlist')
+		    .empty()
+			    .append("<option value='select'>Select</option><option value='Create New Intent'>Create New Intent</option>");
+				
+			var messageData = intentData;
+			if(messageData.includes("File Not Exist") == false) {
+			messageData = messageData.replace("null#","");
+			var messageArr = messageData.split('#');
+			
+				var selectTag = document.getElementById("intentlist");
+				for (var j=0; j<messageArr.length; j++) {
+					var option = document.createElement("option");
+				option.text = messageArr[j];
+				option.setAttribute ("value", messageArr[j]);
+					selectTag.add(option, selectTag[j]);
+				}
+				}
+				
+				document.getElementById('newIntentValue').value = "";
+				document.getElementById("newIntentValue").style.display = "none";
+				document.getElementById('intentlist').value = "select";
+				document.getElementById("entitylist").options.length = 0;
+			
+			alert("Data Saved")
+			});
+		}
+	});
+	
+}
+
+//function enableEntity() {
+//	
+//	var examples = document.getElementById('ceditorexamples').value;
+//	$('#entitylistsec').empty();
+//	
+//	if (examples != "") {
+//		document.getElementById("ceditorexamples").style.display = "none";
+//		document.getElementById("ceditorbtn").style.display = "block";
+//		
+//		var selectTag2 = document.getElementById("entitylistsec");
+//		
+//		var option = document.createElement("option");
+//		option.text = "Select";
+//		option.setAttribute ("value", "Select");
+//		selectTag2.add(option, selectTag2[0]);
+//		
+//		for (var j=0; j<entityArr.length; j++) {
+//			var option = document.createElement("option");
+//			option.text = entityArr[j];
+//			option.setAttribute ("value", entityArr[j]);
+//			selectTag2.add(option, selectTag2[j+1]);
+//		}
+//		entityArr = [];
+//		
+//	} else {
+//		alert("First select intent.");
+//	}
+//	
+//	//<button id="but" class="but" value="but">Te</button>
+//	
+//	var examplesArray = examples.split("\n");
+//	var finalExampleBtnText = "";
+//	var butId = "";
+//	
+//	for (var i = 0; i < examplesArray.length; i++) {
+//		butId = i;
+//		var singleExample = examplesArray[i].trim();
+//		
+//		var singleExampleWrodArray = singleExample.split(" ");
+//		
+//		for (var j = 0; j < singleExampleWrodArray.length; j++) {
+//			butId = butId+""+j;
+//			var singleWord = singleExampleWrodArray[j];
+//			var buttonWord = "<button class='exampleButton' name='"+singleExample+"' onclick='exampleButton()'>"+singleWord+"</button>";
+//			finalExampleBtnText = finalExampleBtnText + buttonWord;
+//		}
+//		finalExampleBtnText = finalExampleBtnText+"<br>";
+//		butID="";
+//	}
+//	
+//	document.getElementById('ceditorbtn').innerHTML = finalExampleBtnText;
+//	
+//}
+//
+//function diableEntity() {
+//	document.getElementById("ceditorexamples").style.display = "block";
+//	document.getElementById("ceditorbtn").style.display = "none";
+//}
+//
+//var entityValueText = "";
+//var exampleText = "";
+//function exampleButton() {
+//	
+//	$(".exampleButton").click(function () {
+//		
+//		entityValueText = $(this).text();
+//		//$('#entityValue').val(entityValueText);
+//		exampleText = $(this).attr("name");
+//		$(this).css({"background-color":"yellow"});
+//		var modal = document.getElementById("popupModal");
+//		modal.style.display = "block";
+//		
+//		var x = document.getElementById("entitylist");
+//		for (var i = 0; i < x.length; i++) { 
+//            var option = x.options[i];
+//            var optionText = option.text; 
+//            if (optionText.includes(entityValueText)) {
+//            	document.getElementById("entityText").value = optionText.split("(")[0];
+//            	document.getElementById("entityText").disabled = true;
+//            }
+//        } 
+//		});
+//	
+//}
+//
+//
+//function closePopup() {
+//	document.getElementById("entityText").disabled = false;
+//	var entityTextBox = document.getElementById("entityText");
+//	entityTextBox.value = "";
+//	var modal = document.getElementById("popupModal");
+//	modal.style.display = "none";
+//}
+//
+//function saveEntity() {
+//	var entityText = document.getElementById("entityText").value;
+//	var intent = document.getElementById("intentlist").value;
+//	finalTextModfied =  finalTextModfied +"<<@>>"+ intent+"<<>>"+exampleText+"<<>>"+entityValueText+"<<>>"+entityText;
+//	closePopup();
+//}
+//
+//function useExistingEntity() {
+//	var selectedEntity = this.value
+//	var textBox = document.getElementById('entityText');
+//	if (textBox.disabled) {
+//	      //Do nothing
+//	    } else {
+//	    	document.getElementById('entityText').value = selectedEntity;
+//	    }
+//}
+//
+//function regexEntryBtn() {
+//	
+//	var x = document.getElementById("regex");
+//	if (window.getComputedStyle(x).display === "none") {
+//		document.getElementById("regex").style.display = "block";
+//		document.getElementById("regexbtn").innerHTML = "";
+//		document.getElementById("regexbtn").innerHTML = "[-] Add Regex";
+//	} else {
+//		document.getElementById("regexbtn").innerHTML = "";
+//		document.getElementById("regexbtn").innerHTML = "[+] Add Regex";
+//		document.getElementById("regex").style.display = "none";
+//	}
+//}
+//
+//function synonymEntryBtn() {
+//	var x = document.getElementById("synonym");
+//	if (window.getComputedStyle(x).display === "none") {
+//		document.getElementById("synonym").style.display = "block";
+//		document.getElementById("synonymbtn").innerHTML = "";
+//		document.getElementById("synonymbtn").innerHTML = "[-] Add Synonym";
+//	} else {
+//		document.getElementById("synonymbtn").innerHTML = "";
+//		document.getElementById("synonymbtn").innerHTML = "[+] Add Synonym";
+//		document.getElementById("synonym").style.display = "none";
+//	}
+//}
+//
+//function regexSaveBtn() {
+//	var botName = $("#botlist").val();
+//	if(botName.includes("select")) {
+//		alert("Please select bot first!!!");
+//		return;
+//	} else {
+//		alert("After adding of regex you are not able to add more intents. \nIt's suggestion for you to add regex at last or after complete intent addition.");
+//		if (confirm("Are you sure want to add regex? \nIf you press 'Cancle' you able to add intents.")) {
+//			  
+//			} else {
+//			  return;
+//			}
+//	}
+//	var regexNameText = document.getElementById("regexNameText").value;
+//	var regexPattern = document.getElementById("regexPatternText").value;
+//	
+//	$.post("/completedashboard/AddRegexServlet", {bot:botName, regName:regexNameText, regPattern:regexPattern}, function(status){
+//		var x = status;
+//		
+//		if (x.includes("Regex data added")) {
+//			document.getElementById("regexNameText").value = "";
+//			document.getElementById("regexPatternText").value = "";
+//			document.getElementById("regexbtn").innerHTML = "";
+//			document.getElementById("regexbtn").innerHTML = "[+] Add Regex";
+//			document.getElementById("regex").style.display = "none";
+//		}
+//	});
+//}
+//
+//function synonymSaveBtn() {
+//	var botName = $("#botlist").val();
+//	if(botName.includes("select")) {
+//		alert("Please select bot first!!!");
+//		return;
+//	} else {
+//		alert("After adding of synonym you are not able to add more intents. \nIt's suggestion for you to add synonym at last or after complete intent addition.");
+//		if (confirm("Are you sure want to add synonym? \nIf you press 'Cancle' you able to add intents.")) {
+//			  
+//			} else {
+//			  return;
+//			}
+//	}
+//	var synonymBaseText = document.getElementById("synonymBaseText").value;
+//	var synonymText = document.getElementById("synonymText").value;
+//	
+//	$.post("/completedashboard/AddSynonymServlet", {synoBaseText:synonymBaseText, synoText:synonymText, bot:botName}, function(status){
+//		var x = status;
+//		
+//		if (x.includes("Synonym data added")) {
+//			document.getElementById("synonymBaseText").value = "";
+//			document.getElementById("synonymText").value = "";
+//			document.getElementById("synonymbtn").innerHTML = "";
+//			document.getElementById("synonymbtn").innerHTML = "[+] Add Synonym";
+//			document.getElementById("synonym").style.display = "none";
+//		}
+//	});
+//}
+
+//############################# .md file related stuff #########################
+function botListenerToFetchIntentForNLUPage() {
+	var value = this.value
+	$('#entitylist').empty();
+	document.getElementById('ceditorexamples').value = "";
+	removeButtonOfExampleDataToLookNormal();
+	
+	$.post("/dashboard_copy/FetchIntentForNLUPageServlet", {bot:value}, function(intentData){
+		
+		$('#intentlist')
+	    .empty()
+	    .append("<option value='select'>Select</option><option value='Create New Intent'>Create New Intent</option>");
+		
+		var messageData = intentData;
+		if(messageData.includes("File Not Exist") == false) {
+		var messageArr = messageData.split('#');
+		
+		var selectTag = document.getElementById("intentlist");
+		for (var j=0; j<messageArr.length; j++) {
+			var option = document.createElement("option");
+			option.text = messageArr[j];
+			option.setAttribute ("value", messageArr[j]);
+			selectTag.add(option, selectTag[j]);
+		}
+		}
+		
+	});
+}
+
+function saveOrUpdateIntent() {
+	
+	console.log("saveOrUpdateIntent finalTextModfied"+finalTextModfied);
+	
+	var botName = $("#botlist").val();
+	var examples = document.getElementById('ceditorexamples').value;
+	var newIntentName = document.getElementById('newIntentValue').value;
+	var intentName = document.getElementById('intentlist').value;
+	
+		$.post("/dashboard_copy/SaveNLUDataServlet", {exampledata:examples, intent:intentName, entitydata:finalTextModfied, newIntent:newIntentName, bot:botName}, function(status){
+		var x = status;
+		console.log(x)
+		if (x.includes("Success")) {
+			finalTextModfied = "";
+			removeButtonOfExampleDataToLookNormal();
+			document.getElementById('ceditorexamples').value = "";
+	
+			
+			var botName = $("#botlist").val();
+			$.post("/dashboard_copy/FetchIntentForNLUPageServlet", {bot:botName}, function(intentData){
+				
+				$('#intentlist')
+			    .empty()
+			    .append("<option value='select'>Select</option><option value='Create New Intent'>Create New Intent</option>");
+				
+				var messageData = intentData;
+				if(messageData.includes("File Not Exist") == false) {
+				var messageArr = messageData.split('#');
+				
+				var selectTag = document.getElementById("intentlist");
+				for (var j=0; j<messageArr.length; j++) {
+					var option = document.createElement("option");
+					option.text = messageArr[j];
+					option.setAttribute ("value", messageArr[j]);
+					selectTag.add(option, selectTag[j]);
+				}
+				}
+				
+				document.getElementById('newIntentValue').value = "";
+				document.getElementById("newIntentValue").style.display = "none";
+				document.getElementById('intentlist').value = "select";
+				document.getElementById("entitylist").options.length = 0;
+				
+				alert("Data Saved")
+			});
+		}
+	});
+	
+	
+	
+	
+}
+
+var entityArrayForPopup = [];
+var entitySetForPopup;
+
+function intentChangeListnerToFetchEntityForNLUPage(){
+	
+	console.log("Inside intentChangeListnerToFetchEntityForNLUPage");
+	
+	var value = this.value
+	var botName = $("#botlist").val();
+	var examples = "";
+	
+	if (value.includes("Create New Intent")) {
+		document.getElementById("newIntentValue").style.display = "block";
+		document.getElementById("entitydisplaygroup").style.display = "none";
+		document.getElementById('ceditorexamples').value = "";
+		$.post("/dashboard_copy/FetchEntityAndExampleForNLUPageServlet", {intent:value, bot:botName}, function(response){
+			responseData = response;
+			entitySetForPopup = new Set();
+			
+			$('#entitylist').empty();
+			var entityRawData = responseData.split("<>")[0];
+			var entityArrayData = entityRawData.split("#");
+			var entityStrArr = [];
+			for (var i = 0; i < entityArrayData.length; i++) {
+				entityStrArr.push(entityArrayData[i]);
+			}
+			
+			var selectTag = document.getElementById("entitylist");
+			for (var j=0; j<entityStrArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = entityStrArr[j];
+				option.setAttribute ("value", entityStrArr[j]);
+				selectTag.add(option, selectTag[j]);
+				if (entityArrayForPopup.indexOf(entityStrArr[j]) == -1) {
+					//entityArrayForPopup.push(entityStrArr[j].split("]")[1]);
+					entitySetForPopup.add(entityStrArr[j].split("]")[1]);
+				}
+			}
+			entityArrayForPopup = [];
+			entityArrayForPopup = Array.from(entitySetForPopup);
+		});
+	} else {
+		document.getElementById("entitydisplaygroup").style.display = "none";
+		document.getElementById("newIntentValue").style.display = "none";
+		$.post("/dashboard_copy/FetchEntityAndExampleForNLUPageServlet", {intent:value, bot:botName}, function(response){
+			responseData = response;
+			entitySetForPopup = new Set();
+			document.getElementById("ceditorexamples").style.display = "none";
+			document.getElementById("ceditorbtn").style.display = "none";
+
+			var exampleRawData = responseData.split("<>")[1];
+			var searchRegExp = new RegExp("#", 'g');
+			var exampleArrayData = exampleRawData.replace(searchRegExp,"\n");
+			
+			document.getElementById('ceditorexamples').value = exampleArrayData;
+			
+			$('#entitylist').empty();
+			var entityRawData = responseData.split("<>")[0];
+			var entityArrayData = entityRawData.split("#");
+			var entityStrArr = [];
+			for (var i = 0; i < entityArrayData.length; i++) {
+				entityStrArr.push(entityArrayData[i]);
+			}
+			
+			var selectTag = document.getElementById("entitylist");
+			for (var j=0; j<entityStrArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = entityStrArr[j];
+				option.setAttribute ("value", entityStrArr[j]);
+				selectTag.add(option, selectTag[j]);
+				if (entityArrayForPopup.indexOf(entityStrArr[j]) == -1) {
+					//entityArrayForPopup.push(entityStrArr[j].split("]")[1]);
+					entitySetForPopup.add(entityStrArr[j].split("]")[1]);
+				}
+			}
+			entityArrayForPopup = [];
+			entityArrayForPopup = Array.from(entitySetForPopup);
+		});
+	}
+	
+}
+
+function makeButtonOfExampleDataToAddEntity() {
+	
+	var examples = document.getElementById('ceditorexamples').value;
+	$('#entitylistsec').empty();
+	document.getElementById('entitynametext').value = "";
+	
+	if (examples != "") {
+		document.getElementById("entityAddSection").style.display = "block";
+		document.getElementById("clearentitybtn").style.display = "none";
+		document.getElementById("entitylistsec").style.display = "none";
+		document.getElementById("ceditorexamples").style.display = "none";
+		document.getElementById("ceditorbtn").style.display = "block";
+		
+		console.log("");
+		
+		var selectTag2 = document.getElementById("entitylistsec");
+		//var selectTag2 = document.getElementById("entitynamelist");
+		
+		var option = document.createElement("option");
+		option.text = "Select";
+		option.setAttribute ("value", "Select");
+		selectTag2.add(option, selectTag2[0]);
+		
+		for (var j=0; j<entityArrayForPopup.length; j++) {
+			var option = document.createElement("option");
+			option.text = entityArrayForPopup[j];
+			option.setAttribute ("value", entityArrayForPopup[j]);
+			selectTag2.add(option, selectTag2[j+1]);
+		}
+		//entityArrayForPopup = [];
+		
+	} else {
+		alert("First select intent.");
+	}
+	
+	var examplesArray = examples.split("\n");
+	var finalExampleBtnText = "";
+	var butId = "";
+	
+	for (var i = 0; i < examplesArray.length; i++) {
+		butId = i;
+		var singleExample = examplesArray[i].trim();
+		
+		var singleExampleWrodArray = singleExample.split(" ");
+		
+		for (var j = 0; j < singleExampleWrodArray.length; j++) {
+			butId = butId+""+j;
+			var singleWord = singleExampleWrodArray[j];
+			var buttonWord = "<button class='exampleButton' name='"+singleExample.replace(/[^\w\s]/gi, '')+"' onclick='clickOnExampleTextButton()'>"+singleWord+"</button>";
+			finalExampleBtnText = finalExampleBtnText + buttonWord;
+		}
+		finalExampleBtnText = finalExampleBtnText+"<br>";
+		butID="";
+	}
+	
+	document.getElementById('ceditorbtn').innerHTML = finalExampleBtnText;
+	
+}
+
+//function removeButtonOfExampleDataToLookNormal() {
+//	document.getElementById("ceditorexamples").style.display = "block";
+//	document.getElementById("ceditorbtn").style.display = "none";
+//}
+
+//var entityValueTextData = "";
+//var exampleDataText = "";
+//function exampleDataTextButtons() {
+//	
+//	$(".exampleButton").click(function () {
+//		
+//		entityValueTextData = $(this).text();
+//		exampleDataText = $(this).attr("name");
+//		$(this).css({"background-color":"yellow"});
+//		var modal = document.getElementById("popupModal");
+//		modal.style.display = "block";
+//		
+//		var x = document.getElementById("entitylist");
+//		for (var i = 0; i < x.length; i++) { 
+//            var option = x.options[i];
+//            var optionText = option.text; 
+//            if (optionText.includes(entityValueTextData)) {
+//            	document.getElementById("entityText").value = optionText.split("(")[0];
+//            	document.getElementById("entityText").disabled = true;
+//            }
+//        } 
+//		});
+//	
+//}
+
+//var finalTextModfied = "";
+//function saveEntityData() {
+//	var entityText = document.getElementById("entityText").value;
+//	var intent = document.getElementById("intentlist").value;
+//	finalTextModfied =  finalTextModfied +"<<@>>"+ intent+"<<>>"+exampleDataText+"<<>>"+entityValueTextData+"<<>>"+entityText;
+//	closePopup();
+//}
+
+
+function closePopup() {
+	document.getElementById("entityText").disabled = false;
+	var entityTextBox = document.getElementById("entityText");
+	entityTextBox.value = "";
+	var modal = document.getElementById("popupModal");
+	modal.style.display = "none";
+}
+
+//function useExistingEntity() {
+//	var selectedEntity = this.value
+//	var textBox = document.getElementById('entityText');
+//	if (textBox.disabled) {
+//	      //Do nothing
+//	    } else {
+//	    	document.getElementById('entityText').value = selectedEntity;
+//	    }
+//}
+
+//***************************Entity with textbox start****************************//
+function showAvailableEntity() {
+	document.getElementById("entitylistsec").style.display = "block";
+}
+
+var entityValueTextData = "";
+var exampleDataText = "";
+function clickOnExampleTextButton() {
+	
+	$(".exampleButton").click(function (ev) {
+		ev.stopImmediatePropagation();
+		var textBox = document.getElementById('entitynametext');
+		if (textBox.disabled) {
+		      return;
+		}
+		entityValueTextData = $(this).text();
+		exampleDataText = $(this).attr("name");
+		var x = document.getElementById("entityvaluetext").value.trim();
+		document.getElementById("entityvaluetext").value = x+" "+entityValueTextData;
+		
+		var x = document.getElementById("entitylist");
+		for (var i = 0; i < x.length; i++) { 
+            var option = x.options[i];
+            var optionText = option.text; 
+            if (optionText.includes(entityValueTextData)) {
+            	document.getElementById("entityvaluetext").value = "";
+            	document.getElementById("entityvaluetext").value = entityValueTextData;
+            	document.getElementById("entitynametext").value = optionText.split("(")[0];
+            	document.getElementById("entitynametext").disabled = true;
+            	document.getElementById("saveentitybtn").style.display = "none";
+            	document.getElementById("clearentitybtn").style.display = "block";
+            }
+        }
+		});
+	
+}
+
+function useExistingEntity() {
+	var selectedEntity = this.value
+	var textBox = document.getElementById('entitynametext');
+	if (textBox.disabled) {
+	      //Do nothing
+	    } else {
+	    	document.getElementById('entitynametext').value = selectedEntity;
+	    }
+}
+
+function removeButtonOfExampleDataToLookNormal() {
+	document.getElementById("entityvaluetext").value = "";
+	document.getElementById("entitynametext").disabled = false;
+	document.getElementById("entityAddSection").style.display = "none";
+	document.getElementById("ceditorexamples").style.display = "none";
+	document.getElementById("ceditorbtn").style.display = "none";
+}
+
+
+function freshEntryForEntity() {
+	document.getElementById("entitynametext").disabled = false;
+	document.getElementById('entitynametext').value = "";
+	document.getElementById("entityvaluetext").value = "";
+	document.getElementById("clearentitybtn").style.display = "none";
+	document.getElementById("saveentitybtn").style.display = "block";
+}
+
+var finalTextModfied = "";
+function saveEntityData() {
+	console.log("saveEntityData Before"+finalTextModfied);
+	var entityText = document.getElementById("entitynametext").value;
+	var valueText = document.getElementById("entityvaluetext").value;
+	var intent = document.getElementById("intentlist").value;
+	finalTextModfied =  finalTextModfied +"<<@>>"+ intent+"<<>>"+exampleDataText+"<<>>"+valueText.trim()+"<<>>"+entityText;
+	console.log("saveEntityData Before"+finalTextModfied);
+	document.getElementById('entitynametext').value = "";
+	document.getElementById("entityvaluetext").value = "";
+	//closePopup();
+}
+
+//***************************Entity with textbox end****************************//
+
+function regexEntryBtn() {
+
+var x = document.getElementById("regex");
+if (window.getComputedStyle(x).display === "none") {
+	document.getElementById("intentListlabel").style.display = "none";
+	document.getElementById("intentlist").style.display = "none";
+	document.getElementById("entityListlabel").style.display = "none";
+	document.getElementById("entitylist").style.display = "none";
+	document.getElementById("exampledatalabel").style.display = "none";
+	document.getElementById("ceditorexamples").style.display = "none";
+	document.getElementById("footeradd").style.display = "none";
+	document.getElementById("regex").style.display = "block";
+	document.getElementById("regexbtn").innerHTML = "";
+	document.getElementById("regexbtn").innerHTML = "[-] Back";
+} else {
+	document.getElementById("regexbtn").innerHTML = "";
+	document.getElementById("regexbtn").innerHTML = "[+] Regex Section";
+	document.getElementById("regex").style.display = "none";
+	document.getElementById("intentListlabel").style.display = "block";
+	document.getElementById("intentlist").style.display = "block";
+	document.getElementById("entityListlabel").style.display = "block";
+	document.getElementById("entitylist").style.display = "block";
+	document.getElementById("exampledatalabel").style.display = "block";
+	document.getElementById("ceditorexamples").style.display = "none";
+	document.getElementById("footeradd").style.display = "block";
+}
+}
+
+function synonymEntryBtn() {
+var x = document.getElementById("synonym");
+if (window.getComputedStyle(x).display === "none") {
+	document.getElementById("intentListlabel").style.display = "none";
+	document.getElementById("intentlist").style.display = "none";
+	document.getElementById("entityListlabel").style.display = "none";
+	document.getElementById("entitylist").style.display = "none";
+	document.getElementById("exampledatalabel").style.display = "none";
+	document.getElementById("ceditorexamples").style.display = "none";
+	document.getElementById("footeradd").style.display = "none";
+	document.getElementById("synonym").style.display = "block";
+	document.getElementById("synonymbtn").innerHTML = "";
+	document.getElementById("synonymbtn").innerHTML = "[-] Back";
+} else {
+	document.getElementById("synonymbtn").innerHTML = "";
+	document.getElementById("synonymbtn").innerHTML = "[+] Synonym Section";
+	document.getElementById("synonym").style.display = "none";
+	document.getElementById("intentListlabel").style.display = "block";
+	document.getElementById("intentlist").style.display = "block";
+	document.getElementById("entityListlabel").style.display = "block";
+	document.getElementById("entitylist").style.display = "block";
+	document.getElementById("exampledatalabel").style.display = "block";
+	document.getElementById("ceditorexamples").style.display = "none";
+	document.getElementById("footeradd").style.display = "block";
+}
+}
+
+function regexSaveBtn() {
+var botName = $("#botlist").val();
+if(botName.includes("select")) {
+	alert("Please select bot first!!!");
+	return;
+} else {
+	//alert("It will add only regex data not your ");
+	if (confirm("Are you sure want to add regex?")) {
+		  
+		} else {
+		  return;
+		}
+}
+var regexNameText = document.getElementById("regexNameText").value;
+var regexPattern = document.getElementById("regexPatternText").value;
+
+$.post("/dashboard_copy/AddRegexServlet", {bot:botName, regName:regexNameText, regPattern:regexPattern}, function(status){
+	var x = status;
+	
+	if (x.includes("Regex data added")) {
+		document.getElementById("regexNameText").value = "";
+		document.getElementById("regexPatternText").value = "";
+		document.getElementById("regexbtn").innerHTML = "";
+		document.getElementById("regexbtn").innerHTML = "[+] Add Regex";
+		document.getElementById("regex").style.display = "none";
+		document.getElementById("intentListlabel").style.display = "block";
+		document.getElementById("intentlist").style.display = "block";
+		document.getElementById("entityListlabel").style.display = "block";
+		document.getElementById("entitylist").style.display = "block";
+		document.getElementById("exampledatalabel").style.display = "block";
+		document.getElementById("ceditorexamples").style.display = "none";
+		document.getElementById("footeradd").style.display = "block";
+		alert("Regex added successfully");
+	}
+});
+}
+
+function regexShowBtn() {
+	document.getElementById("showRegexSection").style.display = "block";
+	var botName = $("#botlist").val();
+	$.post("/dashboard_copy/ShowRegexServlet", {bot:botName}, function(regexData){
+		var rd = regexData;
+		if (regexData.includes("Regex not available") == false) {
+			var searchRegExp = new RegExp("<<>>", 'g');
+			var rdArrayData = rd.replace(searchRegExp,"\n");
+			document.getElementById('showAvailableRegex').value = rdArrayData;
+		} else {
+			alert(regexData);
+		}
+	});
+}
+
+function synonymSaveBtn() {
+var botName = $("#botlist").val();
+if(botName.includes("select")) {
+	alert("Please select bot first!!!");
+	return;
+} else {
+	//alert("After adding of synonym you are not able to add more intents. \nIt's suggestion for you to add synonym at last or after complete intent addition.");
+	if (confirm("Are you sure want to add synonym?")) {
+		  
+		} else {
+		  return;
+		}
+}
+var synonymBaseText = document.getElementById("synonymBaseText").value;
+var synonymText = document.getElementById("synonymText").value;
+
+$.post("/dashboard_copy/AddSynonymServlet", {synoBaseText:synonymBaseText, synoText:synonymText, bot:botName}, function(status){
+	var x = status;
+	
+	if (x.includes("Synonym data added")) {
+		document.getElementById("synonymBaseText").value = "";
+		document.getElementById("synonymText").value = "";
+		document.getElementById("synonymbtn").innerHTML = "";
+		document.getElementById("synonymbtn").innerHTML = "[+] Add Synonym";
+		document.getElementById("synonym").style.display = "none";
+		document.getElementById("intentListlabel").style.display = "block";
+		document.getElementById("intentlist").style.display = "block";
+		document.getElementById("entityListlabel").style.display = "block";
+		document.getElementById("entitylist").style.display = "block";
+		document.getElementById("exampledatalabel").style.display = "block";
+		document.getElementById("ceditorexamples").style.display = "none";
+		document.getElementById("footeradd").style.display = "block";
+		alert("Synonym added successfully");
+	}
+});
+}
+
+function synonymShowBtn() {
+	document.getElementById("showSynonymSection").style.display = "block";
+	var botName = $("#botlist").val();
+	$.post("/dashboard_copy/ShowSynonymServlet", {bot:botName}, function(synonymData){
+		var sd = synonymData;
+		if (synonymData.includes("Synonym not available") == false) {
+			var searchRegExp = new RegExp("<<>>", 'g');
+			var sdArrayData = sd.replace(searchRegExp,"\n");
+			document.getElementById('showAvailableSynonym').value = sdArrayData;
+		} else {
+			alert(synonymData);
+		}
+	});
+}
+
+//-------------------------------- Intent Page End --------------------------//
+
+//-------------------------------- Domain Page Start --------------------------//
+
+function botListenerDomain() {
+	
+	var botName = this.value;
+	
+	document.getElementById("intentandentitygroup").style.display = "block";
+	
+	$.post("/dashboard_copy/FetchIntentForNLUPageServlet", {bot:botName}, function(intentData) {
+		
+		var messageData = intentData;
+		if(messageData.includes("File Not Exist") == false) {
+		messageData = messageData.replace("null#","");
+		var messageArr = messageData.split('#');
+		
+		var selectTag = document.getElementById("intentlist");
+		for (var j=0; j<messageArr.length; j++) {
+			var option = document.createElement("option");
+			option.text = messageArr[j];
+			option.setAttribute ("value", messageArr[j]);
+			selectTag.add(option, selectTag[j]);
+		}
+		} else {
+			alert("File Not Exist");
+		}
+		
+	});
+	
+}
+
+function changeIntentListenerOnDomainPage() {
+	
+	var botName = $("#botlist").val();
+	var intentName = this.value;
+	
+	$.post("/dashboard_copy/FetchOnlyEntityServlet", {intent:intentName, bot:botName}, function(entityData){
+		
+		$('#entitylist').empty();
+		
+		var messageData = entityData;
+		console.log(messageData);
+		if(messageData.includes("File Not Exist") == false) {
+//		messageData = messageData.replace("null#","");
+//		messageData = messageData.replace("null","");
+//		var messageArr = messageData.split("#");
+//		var entityStrArr = [];
+//		for (var i = 0; i < messageArr.length; i++) {
+//			entityStrArr.push(messageArr[i].split(":")[0]);
+//		}
+//		
+//		var selectTag = document.getElementById("entitylist");
+//		for (var j=0; j<entityStrArr.length; j++) {
+//			var option = document.createElement("option");
+//			option.text = entityStrArr[j] +" ("+messageArr[j].split(":")[1]+")";
+//			option.setAttribute ("value", entityStrArr[j]);
+//			selectTag.add(option, selectTag[j]);
+//		}
+//		messageArr = [];
+//		entityStrArr = [];
+			
+			//var entityRawData = responseData.split("<>")[0];
+			var entityArrayData = messageData.split("#");
+			var entitySet = new Set();
+			var entityStrArr = [];
+			for (var i = 0; i < entityArrayData.length; i++) {
+				var entityStr = entityArrayData[i];
+				entityStr = entityStr.split("]")[1];
+				entityStr = entityStr.replace(/[^\w\s]/gi, '');
+				entitySet.add(entityStr);
+				//entityStrArr.push(entityStr);
+			}
+			entityStrArr = Array.from(entitySet);
+			
+			var selectTag = document.getElementById("entitylist");
+			for (var j=0; j<entityStrArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = entityStrArr[j];
+				option.setAttribute ("value", entityStrArr[j]);
+				selectTag.add(option, selectTag[j]);
+			}
+			
+		} else {
+			alert("Entity Data Not Available");
+		}
+		
+	});
+	
+}
+
+//function intentListenerDomain() {
+//	
+//	var intentName = this.value
+//	var botName = $("#botlist").val();
+//	
+//	$.post("/completedashboard/FetchEntityForDomainServlet", {intent:intentName, bot:botName}, function(entityData){
+//		
+//		var messageData = entityData;
+//		if(messageData.includes("File Not Exist") == false) {
+//		messageData = messageData.replace("null#","");
+//		messageData = messageData.replace("null","");
+//		var messageArr = messageData.split('#');
+//		
+//		var selectTag = document.getElementById("entitylist");
+//		for (var j=0; j<messageArr.length; j++) {
+//			var option = document.createElement("option");
+//			option.text = messageArr[j];
+//			option.setAttribute ("value", messageArr[j]);
+//			selectTag.add(option, selectTag[j]);
+//		}
+//		}
+//		
+//	});
+//	
+//}
+
+var templateArr = [];
+function addTemplate() {
+	
+
+	
+		
+		
+		var utterName="";
+		var utterDetails="";
+		
+		
+		utterName = "utter_"+$("#template-name").val();
+		utterDetails = $("#template_detarea").val();
+	
+	if (utterDetails.includes("\n")) {
+		var utterDetailsSplit = utterDetails.split("\n");
+		var utterDetailsStr = "";
+	
+		for (var i = 0; i < utterDetailsSplit.length; i++) {
+			if (utterDetailsStr.length == 0) {
+				utterDetailsStr = utterDetailsSplit[i].trim();
+			} else {
+				utterDetailsStr = utterDetailsStr +" "+ utterDetailsSplit[i].trim();
+			}
+		}
+		utterDetails = utterDetailsStr;
+	}
+	
+	//document.getElementById('actions_config').innerHTML = utterName;
+	
+	var templateData = utterName+"#"+utterDetails;
+	templateArr.push(templateData);
+	
+	document.getElementById('template-name').value = "";
+	
+	document.getElementById('template_detarea').value = "";
+	//document.getElementById('actions_config').innerHTML = "";
+	
+	
+	
+	
+}
+
+function saveDomainData() {
+	
+
+	
+	
+		var botName = $("#botlist").val();
+	var allTemplateData = "";
+	
+	addTemplate();
+	
+	for (var i = 0; i < templateArr.length; i++) {
+		allTemplateData = allTemplateData +"|"+ templateArr[i];
+	}
+	
+	$.post("/dashboard_copy/SaveDomainDataServlet", {bot:botName, template:allTemplateData}, function(domainSaveStatus){
+		
+		var status = domainSaveStatus;
+		
+		if (status.includes("Success")) {
+			alert("File saved");
+			showUtters();
+		}
+		
+	});
+	
+	
+	
+	while(templateArr.length > 0) {
+    templateArr.pop();
+	}
+	
+	
+	
+}
+
+function showUtters() {
+	document.getElementById("utterdisplaysection").style.display = "block";
+	var botName = $("#botlist").val();
+	
+	$.post("/dashboard_copy/UtterDisplayServlet", {bot:botName}, function(readUtterDetails){
+		
+		var utterData = readUtterDetails;
+		utterData = utterData.replace("[","");
+		utterData = utterData.replace("]","");
+		var utterDataArray = utterData.split(",");
+		var displayUtterData = "";
+		for (var i = 0; i < utterDataArray.length; i++) {
+			if (displayUtterData.length == 0) {
+				displayUtterData = utterDataArray[i];
+			} else {
+				displayUtterData = displayUtterData + "\n" + utterDataArray[i];
+			}
+		}
+		//utterData = utterData.replace(",","\n");
+		document.getElementById("utter_display").innerHTML = displayUtterData;
+		
+	});
+}
+
+//-------------------------------- Domain Page End --------------------------//
+
+//-------------------------------- Model Page Start --------------------------//
+
+function botListenerModels() {
+	
+	var botName = $("#botlist").val();
+	
+	$.post("/dashboard_copy/FetchNluModelsServlet", {bot:botName}, function(fetchedModels){
+
+		document.getElementById("modelslist").innerHTML = "<option value='selet'>Select</option>";
+		var messageData = fetchedModels;
+		//messageData = messageData.replace("null#","");
+		var messageArr = messageData.split('##');
+		
+		if (messageData.length == 0) {
+			alert("Goto trainning section.\nPlease train first!!!")
+		} else {
+			var selectTag = document.getElementById("modelslist");
+			for (var j=0; j<messageArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = messageArr[j];
+				option.setAttribute ("value", messageArr[j]);
+				selectTag.add(option, selectTag[j]);
+			}
+		}
+	});
+	
+}
+
+//-------------------------------- Model Page End --------------------------//
+
+//-------------------------------- Stories Page Start --------------------------//
+
+function botListenerStories() {
+	var botName = this.value
+	
+	$.post("/dashboard_copy/ReadStoryFileServlet", {bot:botName}, function(storiesData){
+		document.getElementById("addStoriesBlock").style.display = "none";
+		document.getElementById("viewStriesBlock").style.display = "block";
+		document.getElementById("addeditbtn").style.visibility = "visible";
+		document.getElementById("deleteStoriesPageB").style.visibility = "visible";
+		
+		var x = storiesData;
+		if(x.length != 0 && x.includes("File Not Exist") == false) {
+			var formatedText = "";
+			
+			var formatTextArr =  x.split(',')
+			for (var i = 0; i < formatTextArr.length; i++) {
+				formatedText = formatedText + "\n" + formatTextArr[i];
+			}
+			
+			document.getElementById("completeStories").innerHTML = formatedText;
+		} else {
+			document.getElementById("completeStories").innerHTML = "Stories not available";
+		}
+	});
+}
+
+
+function addEditStories() {
+	document.getElementById("addStoriesBlock").style.display = "block";
+	document.getElementById("addStoriesBlock").style.visibility = "visible";
+	document.getElementById("viewStriesBlock").style.display = "none";
+	document.getElementById("addeditbtn").style.visibility = "visible";
+	
+	var r = Math.floor(Math.random() * 100000) + 1;
+	var storyStr = "##story_";
+	
+	document.getElementById("stories-name").value = storyStr+r;
+	
+	var botName = $("#botlist").val();
+	
+	$.post("/dashboard_copy/FetchIntentForNLUPageServlet", {bot:botName}, function(intentData){
+		
+		var messageData = intentData;
+		if(messageData.includes("File Not Exist") == false) {
+		messageData = messageData.replace("null#","");
+		var messageArr = messageData.split('#');
+		
+		var selectTag = document.getElementById("intentlist");
+		for (var j=0; j<messageArr.length; j++) {
+			var option = document.createElement("option");
+			option.text = messageArr[j];
+			option.setAttribute ("value", messageArr[j]);
+			selectTag.add(option, selectTag[j]);
+		}
+		}
+		
+	});
+	
+}
+
+function changeListenerForStories() {
+	
+	var intentName = this.value
+	var botName = $("#botlist").val();
+	
+	$.post("/dashboard_copy/FetchOnlyEntityServlet", {intent:intentName, bot:botName}, function(entityData){
+		
+		document.getElementById("entitylist").innerHTML = "<option value='select'>Select</option>";
+		
+		var messageData = entityData;
+		if(messageData.includes("File Not Exist") == false && messageData != null) {
+//			messageData = messageData.replace("null#","");
+//			messageData = messageData.replace("null","");
+//			var messageArr = messageData.split("#");
+//			
+//			var selectTag = document.getElementById("entitylist");
+//			for (var j=0; j<messageArr.length; j++) {
+//				var option = document.createElement("option");
+//				option.text = messageArr[j];
+//				option.setAttribute ("value", messageArr[j]);
+//				selectTag.add(option, selectTag[j]);
+//			}
+//		
+//		//document.getElementById("storiesentity").value = messageArr;
+			
+			var entityArrayData = messageData.split("#");
+			var entitySet = new Set();
+			var entityStrArr = [];
+			for (var i = 0; i < entityArrayData.length; i++) {
+				var entityStr = entityArrayData[i];
+//				entityStr = entityStr.split("]")[1];
+//				entityStr = entityStr.replace(/[^\w\s]/gi, '');
+				entitySet.add(entityStr);
+				//entityStrArr.push(entityStr);
+			}
+			entityStrArr = Array.from(entitySet);
+			
+			var selectTag = document.getElementById("entitylist");
+			for (var j=0; j<entityStrArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = entityStrArr[j];
+				option.setAttribute ("value", entityStrArr[j]);
+				selectTag.add(option, selectTag[j]);
+			}
+		} else {
+			alert("Entity data not available");
+		}
+		
+	});
+	
+	$.post("/dashboard_copy/FetchActionForStoriesServlet", {bot:botName}, function(actionData){
+		
+		document.getElementById("actionslist").innerHTML = "<option value='select'>Select</option>";
+		
+		var messageData = actionData;
+		if(messageData.includes("File Not Exist") == false) {
+			//messageData = messageData.replace(",","\n");
+			var messageArr = messageData.split(',');
+			
+			var selectTag = document.getElementById("actionslist");
+			for (var j=0; j<messageArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = messageArr[j];
+				option.setAttribute ("value", messageArr[j]);
+				selectTag.add(option, selectTag[j]);
+			}
+		}
+		
+	});
+}
+
+function viewStories() {
+	document.getElementById("addStoriesBlock").style.display = "none";
+	document.getElementById("viewStriesBlock").style.display = "block";
+	
+}
+
+function saveToStories() {
+	var botName = $("#botlist").val();
+	var storyFileData = document.getElementById('storiesactions').value;
+	
+	$.post("/dashboard_copy/SaveStoryFileServlet", {bot:botName, story:storyFileData}, function(storiesSaveStatus){
+		var status = storiesSaveStatus;
+		
+		if (status.includes("Success")) {
+			document.getElementById('storiesactions').value = "";
+			alert("File saved");
+		}
+	});
+}
+
+
+
+var entityArr = [];
+var utterStr = "";
+var entityStr = "";
+
+function addResponsetoList() {
+	var storyTag = document.getElementById("stories-name").value;
+	
+	var intentSelected = document.getElementById("intentlist");
+	var intentValue = intentSelected.options[intentSelected.selectedIndex].text;
+	
+	//var entitySelected = document.getElementById("entitylist");
+	//var entityValue = entitySelected.options[entitySelected.selectedIndex].text;
+	//entityArr.push(entityValue);
+	addMoreEntitesForStories();
+	
+	//var actionSelected = document.getElementById("actionslist");
+	//var utterValue = actionSelected.options[actionSelected.selectedIndex].text;
+	addMoreUtterForStories();
+	
+	var availableText = document.getElementById("storiesactions").value;
+	if(availableText === "") {
+		document.getElementById("storiesactions").value = storyTag;
+		availableText = document.getElementById("storiesactions").value;
+		document.getElementById("storiesactions").value = availableText +"\n"+"*"+intentValue;
+		availableText = document.getElementById("storiesactions").value;
+		//if (entityValue.includes("Select")==false) {
+			//var entityStr = addMoreEntitesForStories();
+		for (var i = 0; i < entityArr.length; i++) {
+//			if(entityStr.length == 0) {
+//				entityStr = "'"+entityArr[i].split(":")[0]+"':'"+entityArr[i].split(":")[1]+"'";
+//			} else {
+//				entityStr = entityStr + "," +"'"+entityArr[i].split(":")[0]+"':'"+entityArr[i].split(":")[1]+"'";
+//			}
+			if (entityArr[i].includes("(")) {
+				var entityEx = entityArr[i].split("(")[1];
+				entityEx = entityEx.replace(")","");
+				var valueEx = entityArr[i].split("]")[0];
+				valueEx = valueEx.replace("[","");
+				if(entityStr.length == 0) {
+					entityStr = "'"+entityEx+"':'"+valueEx+"'";
+				} else {
+					entityStr = entityStr + "," +"'"+entityEx+"':'"+valueEx+"'";
+				}
+			}
+		}
+		if (entityStr != null && entityStr.length != 0 && (entityStr.includes("undefined") == false|| entityStr.includes("Select") == false)) {
+			document.getElementById("storiesactions").value = availableText+"{"+entityStr+"}";
+		}
+			//document.getElementById("storiesactions").value = availableText+"{'"+entityValue+"':'"+entityValue+"'}";
+		//}
+		availableText = document.getElementById("storiesactions").value;
+		document.getElementById("storiesactions").value = availableText+"\n"+utterStr;
+		
+		refreshStoryPage();
+	} else {
+		document.getElementById("storiesactions").value = availableText + "\n" + "\n" + storyTag;
+		availableText = document.getElementById("storiesactions").value;
+		document.getElementById("storiesactions").value = availableText +"\n"+"*"+intentValue;
+		availableText = document.getElementById("storiesactions").value;
+		//if (entityValue.includes("Select")==false) {
+			//var entityStr = addMoreEntitesForStories();
+		for (var i = 0; i < entityArr.length; i++) {
+//			if(entityStr.length == 0) {
+//				entityStr = "'"+entityArr[i].split(":")[0]+"':'"+entityArr[i].split(":")[1]+"'";
+//			} else {
+//				entityStr = entityStr + "," +"'"+entityArr[i].split(":")[0]+"':'"+entityArr[i].split(":")[0]+"'";
+//			}
+			if (entityArr[i].includes("(")) {
+				var entityEx = entityArr[i].split("(")[1];
+				entityEx = entityEx.replace(")","");
+				var valueEx = entityArr[i].split("]")[0];
+				valueEx = valueEx.replace("[","");
+				if(entityStr.length == 0) {
+					entityStr = "'"+entityEx+"':'"+valueEx+"'";
+				} else {
+					entityStr = entityStr + "," +"'"+entityEx+"':'"+valueEx+"'";
+				}
+			}
+		}
+		document.getElementById("storiesactions").value = availableText+"{"+entityStr+"}";
+			//document.getElementById("storiesactions").value = availableText+"{'"+entityValue+"':'"+entityValue+"'}";
+		//}
+		availableText = document.getElementById("storiesactions").value;
+		document.getElementById("storiesactions").value = availableText+"\n"+utterStr;
+		
+		refreshStoryPage();
+	}
+	utterStr = "";
+	entityStr = "";
+	entityArr = [];
+}
+
+function addMoreEntitesForStories() {
+	var entitySelected = document.getElementById("entitylist");
+	var entityValue = entitySelected.options[entitySelected.selectedIndex].text;
+	entityArr.push(entityValue);
+	
+	document.getElementById('entitylist').value="select";
+}
+
+function addMoreUtterForStories() {
+	var actionSelected = document.getElementById("actionslist");
+	var utterValue = actionSelected.options[actionSelected.selectedIndex].text;
+	
+	if(utterStr.length == 0) {
+		utterStr = utterValue;
+	} else {
+		utterStr = utterStr + "\n" + utterValue;
+	}
+	
+	document.getElementById('actionslist').value="select";
+}
+
+function refreshStoryPage() {
+	var r = Math.floor(Math.random() * 100000) + 1;
+	var storyStr = "##story_";
+	
+	document.getElementById("stories-name").value = storyStr+r;
+	
+	document.getElementById('intentlist').value="select";
+	document.getElementById('entitylist').value="select";
+	document.getElementById('actionslist').value="select";
+}
+
+//-------------------------------- Stories Page End --------------------------//
+
+//-------------------------------- Trainning Page Start --------------------------//
+
+$(document).ready(function(){
+	  $("#trainningid").click(function(){
+		  trainrasa();
+	  });
+	  
+	  $("#filelistbtn").click(function(){
+		  showAllFiles();
+	  });
+	  
+});
+
+function trainrasa() {
+	var botname = $( "#bot-name" ).val();
+	document.getElementById("trainningid").disabled = true;
+	alert("Trainning Started.\nPlease don't change the tab and don't click on other links.");
+	var modal = document.getElementById("popupModal");
+	modal.style.display = "block";
+	
+	$.post("/dashboard_copy/trainingservlet", {name:botname}, function(executionresult){
+		document.getElementById("trainningid").disabled = true;
+		if (executionresult.includes("Trainning Completed")) {
+			document.getElementById("trainningid").disabled = false;
+			var modal = document.getElementById("popupModal");
+			modal.style.display = "none";
+			alert("Trainning Completed \nGo to the model section to view the latest model.");
+		} else if (executionresult.includes("Nothing changed")) {
+			document.getElementById("trainningid").disabled = false;
+			var modal = document.getElementById("popupModal");
+			modal.style.display = "none";
+			alert("Nothing changed. \nYou can use the old model.");
+		} else if (executionresult.includes("Trainning Failed")) {
+			document.getElementById("trainningid").disabled = false;
+			var modal = document.getElementById("popupModal");
+			modal.style.display = "none";
+			alert("Trainning Failed");
+		} else {
+			document.getElementById("trainningid").disabled = false;
+			var modal = document.getElementById("popupModal");
+			modal.style.display = "none";
+			alert("There is something wrong with trainning data. \nCheck your files once again.");
+		}
+	});
+	
+//	setTimeout(function() {
+//		alert("Trainning is going on... \nWait till trainning completed");
+//	},30000);
+}
+
+function showAllFiles() {
+	var botName = $( "#bot-name" ).val();
+
+	if (botName.includes("select")) {
+		alert("Select bot first");
+	} else {
+	
+	$.post("/dashboard_copy/FetchAllFilesListServlet", {bot:botName}, function(fetchedallfiles){
+		
+		document.getElementById("filecontentsection").style.display = "block";
+		$('#fileslist')
+	    .empty();
+		
+		var messageData = fetchedallfiles;
+		
+		var messageArr = messageData.split('##');
+		
+		if (messageData.length == 0) {
+			alert("No any files available");
+		} else {
+			var selectTag = document.getElementById("fileslist");
+			for (var j=0; j<messageArr.length; j++) {
+				var option = document.createElement("option");
+				option.text = messageArr[j];
+				option.setAttribute ("value", messageArr[j]);
+				selectTag.add(option, selectTag[j]);
+			}
+		}
+	});
+	}
+}
+
+//-------------------------------- Trainning Page End --------------------------//
+
+
+//-----------------------------------------------------------------------------------------------------------------//
+function intentChangeListnerToFetchExamplesForNLUPage(){
+	entityDataTest="Select,";
+	var value = this.value
+	var botName = $("#botlist").val();
+	var examples = "";
+	
+	if(value.includes("Create New Intent")){
+		document.getElementById("newIntentValue").style.display = "block";
+		document.getElementById("entitydisplaygroup").style.display = "none";
+		document.getElementById('ceditorexamples').value = "";
+		$.ajax({
+			url: "/dashboard_copy/FetchExamplesForNLUPage",
+			type: "POST",
+			data: { intent: value, bot: botName },
+			success: function(response) {
+				responseData = response;
+				
+				document.getElementById("ceditorexamples").style.display = "none";
+				document.getElementById("ceditorbtn").style.display = "none";
+
+				var exampleRawData = responseData;
+				console.log("exampleRawData"+exampleRawData);
+				
+			$("#data-table").find("tr:gt(0)").remove();
+		}
+		});
+		
+	 }else{
+		document.getElementById("entitydisplaygroup").style.display = "none";
+		document.getElementById("newIntentValue").style.display = "none";
+		
+		
+
+		$.ajax({
+			url: "/dashboard_copy/FetchExamplesForNLUPage",
+			type: "POST",
+			data: { intent: value, bot: botName },
+			success: function(response) {
+				responseData = response;
+				entitySetForPopup = new Set();
+				document.getElementById("ceditorexamples").style.display = "none";
+				document.getElementById("ceditorbtn").style.display = "none";
+
+				var exampleRawData = responseData;
+				var exampleArray = exampleRawData.split("#");
+				var squareregex = /(?<=\[).*?(?=\])/g;
+				var entityregex = /(?<=\().*?(?=\))/g;
+				
+				if(dataSource.length>0){
+					dataSource.splice(0,dataSource.length);
+				}
+				
+				for (var i = 0; i < exampleArray.length; i++) {
+					console.log("exampleArray" + exampleArray[i]);
+					var ds = {};
+					
+					if (exampleArray[i].includes("[")) {
+						ds.value = exampleArray[i].match(squareregex);
+						ds.entity = exampleArray[i].match(entityregex);
+						var temp=exampleArray[i].split("]")[0] + "" + exampleArray[i].split(")")[1];
+						temp=temp.replace("[","");
+						temp=temp.replace("]","");
+						ds.example = temp;
+						
+						if(ds.entity!="" && ds.entity!=null){
+							entityDataTest+=ds.entity+",";
+						}
+						
+						
+						
+					} else {
+						ds.example = exampleArray[i];
+						ds.entity = "";
+						ds.value = "";
+					}
+
+					dataSource[i] = ds;
+				}
+
+				entityContainer=entityDataTest.split(",");
+				
+				
+				for(let p=0;p<entityContainer.length;p++){
+					console.log("entityContainer***"+entityContainer[p]);
+				}
+				populateTable();
+			},
+			error: function(error) {
+				console.log(error);
+			}
+		});
+
+	}
+	
+	
+	
+}
+
+
+
+   function formatExample(example, value, entity) {
+var formattedExample = example.replace(new RegExp(`\\b${escapeRegExp(value)}\\b(?!\\(${entity}\\))`, 'g'), '[' + value + '](' + entity + ')');
+return formattedExample;
+}
+
+
+    function formatExampleForDisplay(example) {
+        return example.replace(/\[(.*?)\]\(.*?\)/g, function(match, value) {
+            return value.trim();
+        });
+    }
+
+//    function populateTable() {
+//        var tableBody = document.querySelector('#data-table tbody');
+//		
+//		$("#data-table").find("tr:gt(0)").remove();
+//		
+//        // Clear table body before populating
+//        tableBody.innerHTML = '';
+//
+//		 var startIndex = (currentPage - 1) * rowsPerPage;
+//    	var endIndex = startIndex + rowsPerPage;
+//
+//        // Loop through the data source and create table rows
+//       for (var i = startIndex; i < endIndex && i < dataSource.length; i++) {
+//            var row = document.createElement('tr');
+//
+//            // Create table cells for each data item
+//            var exampleCell = document.createElement('td');
+//            exampleCell.textContent = formatExampleForDisplay(dataSource[i].example);
+//
+//            var actionCell = document.createElement('td');
+//            actionCell.innerHTML = '<button class="edit-btn" onclick="editExample(this)"><i class="fas fa-edit"></i></button>' +
+//                '<button class="delete-btn" onclick="deleteExample(this)"><i class="fas fa-trash-alt"></i></button>';
+//
+//            row.appendChild(exampleCell);
+//            row.appendChild(actionCell);
+//
+//            // Add the row to the table body
+//            tableBody.appendChild(row);
+//            
+//            // Show/hide next/previous buttons based on current page
+//    var prevButton = document.getElementById('prev-btn');
+//    var nextButton = document.getElementById('next-btn');
+//
+//    if (currentPage === 1) {
+//        prevButton.disabled = true;
+//    } else {
+//        prevButton.disabled = false;
+//    }
+//
+//    if (endIndex >= dataSource.length) {
+//        nextButton.disabled = true;
+//    } else {
+//        nextButton.disabled = false;
+//    }
+//        
+//    }
+//    }
+
+function populateTable() {
+	console.log("Inside populateTable");
+    var tableBody = document.querySelector('#data-table tbody');
+
+    // Clear table body before populating
+    tableBody.innerHTML = '';
+
+    var startIndex = (currentPage - 1) * rowsPerPage;
+    var endIndex = startIndex + rowsPerPage;
+
+    // Loop through the data source and create table rows
+    for (var i = startIndex; i < endIndex && i < dataSource.length; i++) {
+        var row = document.createElement('tr');
+
+        // Create table cells for each data item
+        var exampleCell = document.createElement('td');
+        exampleCell.textContent = formatExampleForDisplay(dataSource[i].example);
+
+        var actionCell = document.createElement('td');
+        actionCell.innerHTML = '<button class="edit-btn" onclick="editExample(this)"><i class="fas fa-edit"></i></button>' +
+            '<button class="delete-btn" onclick="deleteExample(this)"><i class="fas fa-trash-alt"></i></button>';
+
+        row.appendChild(exampleCell);
+        row.appendChild(actionCell);
+
+        // Add the row to the table body
+        tableBody.appendChild(row);
+        
+    var prevButton = document.getElementById('prev-btn');
+    var nextButton = document.getElementById('next-btn');
+
+    if (currentPage === 1) {
+        prevButton.disabled = true;
+    } else {
+        prevButton.disabled = false;
+    }
+
+    if (endIndex >= dataSource.length) {
+        nextButton.disabled = true;
+    } else {
+        nextButton.disabled = false;
+    }
+    
+    }
+}
+
+
+
+function openPopupForm(button) {
+    // Retrieve the example and index from the table row
+    var row = button.parentNode.parentNode;
+    var rowIndex = Array.from(row.parentNode.children).indexOf(row);
+    var example = dataSource[rowIndex].example;
+
+    // Create the popup form elements
+    var popupContainer = document.createElement('div');
+    popupContainer.className = 'popup-container';
+
+    var exampleLabel = document.createElement('label');
+    exampleLabel.textContent = 'Example:';
+    var exampleText = document.createElement('span');
+    exampleText.textContent = example;
+
+    var entityLabel = document.createElement('label');
+    entityLabel.textContent = 'Entity:';
+    var entityDropdown = document.createElement('select');
+     var temp="";
+     
+     
+       
+     
+     let uniqueChars = [...new Set(entityContainer)];
+     
+     console.log("uniqueChars"+uniqueChars);
+     
+    for(var k=0;k<uniqueChars.length;k++){
+		temp+='<option'+' value='+'uniqueChars[k]'+'>'+uniqueChars[k]+'</option>';
+	}
+  	
+  	console.log("temp"+temp);
+    entityDropdown.innerHTML = temp;
+    
+
+    var valueLabel = document.createElement('label');
+    valueLabel.textContent = 'Value:';
+    var valueInput = document.createElement('input');
+    valueInput.type = 'text';
+
+    var saveButton = document.createElement('button');
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', function() {
+        // Retrieve the selected entity and entered value from the form
+        var selectedEntity = entityDropdown.value;
+        var enteredValue = valueInput.value;
+
+
+		console.log("selectedEntity : "+selectedEntity);
+		console.log("enteredValue : "+enteredValue);
+
+        // Perform the desired action with the selected entity and value
+        // For example, you can update the dataSource or perform other operations
+
+        // Close the popup form
+        popupContainer.parentNode.removeChild(popupContainer);
+    });
+
+    // Append the form elements to the popup container
+    popupContainer.appendChild(exampleLabel);
+    popupContainer.appendChild(exampleText);
+
+    popupContainer.appendChild(entityLabel);
+    popupContainer.appendChild(entityDropdown);
+
+    popupContainer.appendChild(valueLabel);
+    popupContainer.appendChild(valueInput);
+
+    popupContainer.appendChild(saveButton);
+
+    // Append the popup container to the document body
+    document.body.appendChild(popupContainer);
+}
+
+  function saveExamples() {
+// Get the table body and all table rows
+var tableBody = document.querySelector('#data-table tbody');
+var rows = tableBody.querySelectorAll('tr');
+
+// Iterate over the rows and extract the examples
+var savedExamples = [];
+for (var i = 0; i < dataSource.length; i++) {
+    //var exampleCell = rows[i].querySelector('td:nth-child(1)');
+     var example = dataSource[i].example;
+    var replaced = false; // Flag variable to track replacement
+
+	console.log(typeof example);
+
+    // Replace the value with [value](entity) format if found in the example
+    dataSource.forEach(function(data) {
+        var regex = new RegExp('\\b' + escapeRegExp(data.value) + '\\b', 'g');
+        //console.log("data.value"+data.value);
+        ///console.log("data.entity"+data.entity);
+        if(data.value!="" && data.entity !=""){
+			console.log("Inside replacement");
+			if (!replaced && regex.test(example)) {
+            example = example.replace(regex, '[' + data.value + '](' + data.entity + ')');
+            replaced = true; // Set the flag to true after replacement
+        }
+		}
+        
+    });
+
+    savedExamples.push(example);
+}
+
+// Create a text file with the examples
+var textContent = savedExamples.join('\n');
+alert(textContent);
+
+console.log("saveOrUpdateIntent finalTextModfied"+finalTextModfied);
+	
+	var botName = $("#botlist").val();
+	var examples = document.getElementById('ceditorexamples').value;
+	var newIntentName = document.getElementById('newIntentValue').value;
+	var intentName = document.getElementById('intentlist').value;
+	
+		$.post("/dashboard_copy/SaveNLUDataServlet", {exampledata:textContent, intent:intentName, entitydata:finalTextModfied, newIntent:newIntentName, bot:botName}, function(status){
+		var x = status;
+		console.log(x)
+		if (x.includes("Success")) {
+			finalTextModfied = "";
+			removeButtonOfExampleDataToLookNormal();
+			document.getElementById('ceditorexamples').value = "";
+			
+			$("#data-table").find("tr:gt(0)").remove();
+			
+			var botName = $("#botlist").val();
+			$.post("/dashboard_copy/FetchIntentForNLUPageServlet", {bot:botName}, function(intentData){
+				
+				$('#intentlist')
+			    .empty()
+			    .append("<option value='select'>Select</option><option value='Create New Intent'>Create New Intent</option>");
+				
+				var messageData = intentData;
+				if(messageData.includes("File Not Exist") == false) {
+				var messageArr = messageData.split('#');
+				
+				var selectTag = document.getElementById("intentlist");
+				for (var j=0; j<messageArr.length; j++) {
+					var option = document.createElement("option");
+					option.text = messageArr[j];
+					option.setAttribute ("value", messageArr[j]);
+					selectTag.add(option, selectTag[j]);
+				}
+				}
+				
+				document.getElementById('newIntentValue').value = "";
+				document.getElementById("newIntentValue").style.display = "none";
+				document.getElementById('intentlist').value = "select";
+				document.getElementById("entitylist").options.length = 0;
+				
+				alert("Data Saved")
+			});
+		}
+	});
+
+//var blob = new Blob([textContent], { type: 'text/plain' });
+//var link = document.createElement('a');
+//link.href = window.URL.createObjectURL(blob);
+//link.download = 'examples.txt';
+//link.click();
+}
+
+    function escapeRegExp(string) {
+		var result=string.toString(); // Convert to string
+        return result.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+//    function editExample(button) {
+//        var row = button.parentNode.parentNode;
+//        var exampleCell = row.querySelector('td:nth-child(1)');
+//        var exampleText = exampleCell.textContent;
+//
+//        var editInput = document.createElement('input');
+//        editInput.className = 'edit-input';
+//        editInput.value = exampleText;
+//
+//        exampleCell.textContent = '';
+//        exampleCell.appendChild(editInput);
+//
+//        button.innerHTML = '<i class="fas fa-save"></i>'; //changed from button.innerText = 'Save';
+//        button.className = 'save-btn';
+//        button.setAttribute('onclick', 'saveEdit(this)');
+//    }
+//
+//
+//	function saveEdit(button) {
+//    var row = button.parentNode.parentNode;
+//    var exampleCell = row.querySelector('td:nth-child(1)');
+//    var editInput = exampleCell.querySelector('.edit-input');
+//    var editedExample = editInput.value;
+//
+//    exampleCell.textContent = editedExample;
+//
+//    // Find the index of the edited example in the dataSource array
+//    var rowIndex = Array.from(row.parentNode.children).indexOf(row);
+//
+//    // Update the corresponding example in the dataSource array
+//    dataSource[rowIndex].example = editedExample;
+//
+//    button.innerHTML = '<i class="fas fa-edit"></i>';
+//    button.className = 'edit-btn';
+//    button.setAttribute('onclick', 'editExample(this)');
+//}
+
+//function editExample(button) {
+//    var row = button.parentNode.parentNode;
+//    var exampleCell = row.querySelector('td:nth-child(1)');
+//    var exampleText = exampleCell.textContent;
+//
+//    var editInput = document.createElement('input');
+//    editInput.className = 'edit-input';
+//    editInput.value = exampleText;
+//
+//    exampleCell.textContent = '';
+//    exampleCell.appendChild(editInput);
+//
+//    button.innerHTML = '<i class="fas fa-save"></i>'; //changed from button.innerText = 'Save';
+//    button.className = 'save-btn';
+//    button.setAttribute('onclick', 'saveEdit(this)');
+//}
+
+function editExample(button) {  // Latest One 
+  var row = button.parentNode.parentNode;
+  var exampleCell = row.querySelector('td:nth-child(1)');
+  var exampleText = exampleCell.textContent;
+
+  // Set example input value
+  var exampleInput = document.getElementById('example-input');
+  exampleInput.value = exampleText;
+
+  // Clear value and entity inputs
+  var valueInput = document.getElementById('value-input');
+  var entityInput = document.getElementById('entity-input');
+  valueInput.value = '';
+  entityInput.value = '';
+
+  // Populate entity dropdown options (replace with your own logic)
+  var entityDropdown = document.getElementById('entity-dropdown');
+  entityDropdown.innerHTML = '';
+  var existingEntities = ["Entity 1", "Entity 2", "Entity 3"]; // Replace with your own list of entities
+  
+  //----------------------------------------------------------------
+  
+ 
+  function removeDuplicates(entityContainer) {
+    return [...new Set(entityContainer)];
+}
+ 
+	 existingEntities=removeDuplicates(entityContainer);
+   // console.log(removeDuplicates(entityContainer));
+  //----------------------------------------------------------------
+  
+  console.log(existingEntities.indexOf(""));
+  
+  const index = existingEntities.indexOf(""); // To remove "" from existingEntities Array
+if (index > -1) { // only splice array when item is found
+  existingEntities.splice(index, 1); // 2nd parameter means remove one item only
+}
+  
+  //console.log("existingEntities"+existingEntities);
+  existingEntities.forEach(function(entity) {
+    var option = document.createElement('option');
+    option.value = entity;
+    option.textContent = entity;
+    entityDropdown.appendChild(option);
+  });
+
+  // Show the popup form
+  var popupForm = document.getElementById('popup-form');
+  popupForm.style.display = 'block';
+  
+   
+}
+
+function saveEdit(button) {
+    var row = button.parentNode.parentNode;
+    var exampleCell = row.querySelector('td:nth-child(1)');
+    var editInput = exampleCell.querySelector('.edit-input');
+    var editedExample = editInput.value;
+
+    exampleCell.textContent = editedExample;
+
+    // Find the index of the edited example in the dataSource array
+    var rowIndex = Array.from(row.parentNode.children).indexOf(row);
+
+    // Update the corresponding example in the dataSource array
+    var startIndex = (currentPage - 1) * rowsPerPage;
+    var actualRowIndex = startIndex + rowIndex;
+    dataSource[actualRowIndex].example = editedExample;
+
+    button.innerHTML = '<i class="fas fa-edit"></i>';
+    button.className = 'edit-btn';
+    button.setAttribute('onclick', 'editExample(this)');
+}
+
+
+    
+    function deleteExample(button) {
+    var row = button.parentNode.parentNode;
+    var rowIndex = Array.from(row.parentNode.children).indexOf(row);
+
+    // Remove the example from the datace array
+    var startIndex = (currentPage - 1) * rowsPerPage;
+    var actualRowIndex = startIndex +rowIndex;
+    dataSource.splice(actualRowIndex, 1);
+
+    // Remove the row from t table
+    row.parentNode.removeChild(row);
+
+    // Repopulate the table
+    populateTable();
+}
+
+
+    // Populate the table on page load
+   
+	function addRow() {
+            var tableBody = document.querySelector('#data-table tbody');
+            var newRow = document.createElement('tr');
+
+            var exampleCell = document.createElement('td');
+            exampleCell.textContent = '';
+
+            var actionCell = document.createElement('td');
+            actionCell.innerHTML = '<button class="edit-btn" onclick="editExample(this)"><i class="fas fa-edit"></i></button>' +
+                '<button class="delete-btn" onclick="deleteExample(this)"><i class="fas fa-trash-alt"></i></button>';
+
+            newRow.appendChild(exampleCell);
+            newRow.appendChild(actionCell);
+
+            tableBody.appendChild(newRow);
+        }
+
+        
+function goToPreviousPage() { 
+	console.log("Inside goToPreviousPage");
+    if (currentPage > 1) {
+        currentPage--;
+        populateTable();
+    }
+}
+
+function goToNextPage() {
+    var maxPage = Math.ceil(dataSource.length / rowsPerPage);
+    if (currentPage < maxPage) {
+        currentPage++;
+        populateTable();
+    }
+}
+
+function closePopupForm() {
+  var popupForm = document.getElementById('popup-form');
+  popupForm.style.display = 'none';
+}
+
+function saveChanges() {
+  // Get the edited example
+  var exampleInput = document.getElementById('example-input');
+  var editedExample = exampleInput.value;
+
+  // Get the added value and entity
+  var valueInput = document.getElementById('value-input');
+  var entityInput = document.getElementById('entity-input');
+  var addedValue = valueInput.value;
+  var addedEntity = entityInput.value;
+
+  // Handle updating the example in the data source
+  // Replace this with your own logic to update the example in your data source
+  // For example, if you are using an array as your data source:
+
+
+  // Find the example you want to update in the data source
+  var exampleToUpdate = dataSource.find(function(example) {
+	  console.log("True");
+    return example.example === editedExample;
+  });
+
+  // Update the example with the new values
+  if (exampleToUpdate) {
+    exampleToUpdate.value = addedValue;
+    exampleToUpdate.entity = addedEntity;
+  }
+
+    
+
+	populateTable();	
+  // Close the popup form
+  closePopupForm();
+}
+
